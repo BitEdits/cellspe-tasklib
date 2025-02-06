@@ -1,0 +1,9 @@
+make -f Makefile-cellspetasklib ; make clean ; make
+SPU_DEBUG_START=1 ./minitest-cell &
+echo "  spu-gdb cellspe-tasklib -p <PID>"
+echo "  br main"
+echo "  br fetch_args"
+echo "  c"
+echo "  bt"
+echo "  p somevar"
+

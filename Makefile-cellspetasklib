@@ -1,0 +1,42 @@
+
+########################################################################
+#                       Target
+########################################################################
+
+# SPU_COMPILER = xlc
+
+PROGRAMS_spu    := cellspe-tasklib
+
+# LIBRARY_embed64 := cellspe-tasklib.a
+LIBRARY_embed   := cellspe-tasklib.a
+
+INCLUDE = -I$(CELL_SDK_ROOT)/usr/spu/include
+# -L$(CELL_SDK_ROOT)/sysroot/usr/spu/lib/
+
+LDFLAGS = -L$(CELL_SDK_ROOT)/sysroot/usr/spu/lib/ -L/usr/spu/lib/ -lmisc -lgmath -lsimdmath -v -B -lsimdmath -v
+
+# for debug code:
+# CPPFLAGS        = -g -pg -O4
+CPPFLAGS = -g -O4 -qhot
+
+# for timing analysis: 
+#   - don't link i.e. use -S gcc flag
+#     before make: declare -x SPU_TIMING="1"
+#   - spu_timing cellspe-tasklib.s
+#   - less cellspe-tasklib.s.timing          
+# CPPFLAGS = -S
+
+# note: for libmisc.a in SDK2.0 you will need to run
+#       a 'make' inside /opt/ibm/cell-sdk/prototype/src/lib/misc/
+#       to first compile that library...
+
+
+########################################################################
+#                       Local Defines
+########################################################################
+
+########################################################################
+#                       make.footer
+########################################################################
+
+include $(CELL_SDK_ROOT)/make.footer

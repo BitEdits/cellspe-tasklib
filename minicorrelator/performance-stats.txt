@@ -1,0 +1,41 @@
+
+ TODO cut&paste from other .txt-files into here...
+
+
+6 SPEs, SPE buffers are 16 kB, SPE raw data input on the PPU is 4096 kB (24576 kB total)
+Initializing raw data arrays...
+ --debug checks: sizeof(cb)=256 sizeof(spe_ls_Ptrs[])=128
+
+ --debug: spe_ls_Ptrs[0]=0x40001863000
+ --debug: spe_ls_Ptrs[1]=0x400020a3000
+ --debug: spe_ls_Ptrs[2]=0x400028e3000
+ --debug: spe_ls_Ptrs[3]=0x40003123000
+ --debug: spe_ls_Ptrs[4]=0x40003963000
+ --debug: spe_ls_Ptrs[5]=0x400041a3000
+Starting SPE calculations... done!
+
+Performance results assuming a clock frequency of 3200 MHz and a timebase of 79800000:
+SPE  0: 0.16 Gbit/sec, exectime 0.197224 sec, dmacount 4096
+SPE  1: 0.16 Gbit/sec, exectime 0.193173 sec, dmacount 4096
+SPE  2: 0.16 Gbit/sec, exectime 0.196703 sec, dmacount 4096
+SPE  3: 0.16 Gbit/sec, exectime 0.196226 sec, dmacount 4096
+SPE  4: 0.16 Gbit/sec, exectime 0.196072 sec, dmacount 4096
+SPE  5: 0.16 Gbit/sec, exectime 0.194664 sec, dmacount 4096
+PPU-side gettimeofday() time delta: 0.1975 sec
+PPU-side corresponding throughput : 0.96 Gbit/s (sum of SPE reported's)
+PPU-side corresponding throughput : 0.95 Gbit/s (#SPEs*TotalPPUdata/t_ppu)
+
+Aggregated performance for all 6 SPEs: 0.96 Gbit/s (of 2665.60 Gbit/s theoretical max).
+Total data moved around: 0.00 MByte
+Final state lock vector: 12288 12288 12288 12288 12288 12288 | 12288 12288 | 0
+
+
+ => 6 stations gives aggregate ~1 Gbit/s (raw data) on single PS3
+
+ This would mean one PS3 could easily process a 6-station 128 Mbps experiment
+ in real-time, 1024 channels resolution.
+
+ For 256 Mbps, need two PS3's. For 512 Mbps, four PS3's. 
+ For 1024 Mbps, use eight PS3's. Etc.
+ This is with time division multiplexing.
+
