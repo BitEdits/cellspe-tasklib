@@ -1,0 +1,452 @@
+
+<html><head><title>Cell SPE Task Library</title>
+<style>
+BODY {
+	font-family : Arial;
+}
+TD.c1 {
+	background-color : LightGrey;
+}
+H1 {
+	background-color : LightBlue;
+}
+H3 {
+	margin-top       : 36px;
+	background-color : LightBlue;
+}
+</style>
+</head>
+<body bgcolor=white>
+<blockquote>
+<A href="http://sourceforge.net"><IMG 
+src="http://sourceforge.net/sflogo.php?group_id=123684&amp;type=5" width="210" 
+height="62" border="0" alt="SourceForge.net Logo" align="right"/></A>
+
+<h1>Cell SPE Task Library</h1>
+
+<p>This project contains a thread-safe digital signal processing and computational microtask execution library for the IBM 
+Cell Broadband Engine. It works in Linux and the IBM Cell SDK 2.1 on the Playstation3 and Cell Blade. The project consists 
+not really of a library but of source code and header files that you can include in your Cell program. The license is GNU 
+LGPL.
+
+<p>The SPE program is started once on 1..N SPEs, where it will stay running and waiting for tasks that can be sent to it
+from your PPU program. The running SPE program(s) can be sent different such computing tasks. Tasks can be single or a 
+chained queue of tasks, for example of different types. The SPE program uses faster mailbox communication, and latencies from  
+task start to end on the PPU side are quite low. There is an additional framework for PPU code that makes accessing the 
+computing SPEs and their  tasks threadsafe.
+
+<p>The set of computational tasks (commands) can be easily extended with your own funcs. The code allows more control 
+over processing, DMAs and buffering than the IBM ALF framework.
+
+<p>Another point for this project is to collect a bag of computational tricks and fast DSP funcs, in the form
+of cut&amp;paste source code snippets that you can can copy into your own SPE programs. These code pieces
+include very fast sine and cosine calculation, complex multiply accumlate, and others.
+
+<ol>
+<li><a href="#status">Status</a></li>
+<li><a href="#cvs">Source code access</a></li>
+<li><a href="#srcdescr">Source code files</a></li>
+<li><a href="#tlusage">Short usage description</a></li>
+<li><a href="#celltips">General Cell programming tips</a></li>
+</ol>
+
+<a name="status" />
+<h3>1 - Status</h3>
+
+<p>Currently the basic framework is up in the CVS (Apr07). It already includes many DSP tasks. There are several additions and code snippets that
+still have to be cleaned up for the CVS (Oct07).
+
+<p>Currently all processing results are transferred out from the SPE to an EA address (RAM or other SPE local store). In the default
+tasks included in the code,
+
+
+<a name="cvs" />
+<h3>Source code access</h3>
+
+<p>No binaries are distributed, only source code. It is available from CVS and should be compiled on the target 
+system. You will need the <a href="http://www.alphaworks.ibm.com/tech/cellsw/download?open&S_TACT=105AGX16&S_CMP=DWPA">IBM Cell SDK 2.1</a>
+and a Playstation3 or Cell Blade. Other Cell platforms are untested.
+
+<p>Anonymous CVS checkout:<br>
+<i><nobr>$ cvs -z3 -d:pserver:anonymous@cellspe-tasklib.cvs.sourceforge.net:/cvsroot/cellspe-tasklib co -P cellspe-tasklib</nobr></i>
+
+<p>ViewCVS repository source:<br>
+<a href="http://cellspe-tasklib.cvs.sourceforge.net/cellspe-tasklib/cellspe-tasklib/">http://cellspe-tasklib.cvs.sourceforge.net/cellspe-tasklib/cellspe-tasklib/</a>
+
+
+<a name="srcdescr" />
+<h3>Source code files</h3>
+
+<table cellpadding=4 cellspacing=3>
+<tr>
+<th>File name</th>
+<th>Description</th>
+</tr>
+
+<tr>
+<td class="c1"><nobr><a href="http://cellspe-tasklib.cvs.sourceforge.net/cellspe-tasklib/cellspe-tasklib/cellspe-tasklib.cpp?view=markup">cellspe-tasklib.cpp</a></nobr></td>
+<td class="c2">The general framework, thread-safe access to the task-SPUs from a PPU program. The file
+contains the PPU-side framework at the start, and SPU-side matching framework at the end of the file.
+All tasks are described by a CellDSPTask_t struct that includes the command type, parameters and pointers
+to input and output data arrays. Framework functions such as celldsp_executeTask(..) dispatch
+a task to a free task-SPE. By default the PPU-side calls will block until the task has completed,
+but a non-blocking flag can be set, too.
+</tr>
+
+<tr>
+<td class="c1"><nobr><a href="http://cellspe-tasklib.cvs.sourceforge.net/cellspe-tasklib/cellspe-tasklib/cellspe-tasklib-dsp.cpp?view=markup">cellspe-taskblib-dsp.cpp</a></nobr></td>
+<td class="c2">Here the actual DSP tasks are implemented. First it contains PPU-side wrappers for your
+task such as speSinCosGenerator() which fill out the CellDSPTask_t task context and 
+pass it for an SPE for execution. Funcs can but need not be called via these wrappers.
+Secondly this .cpp contains the SPE-side vectorized implementation of that function.
+The example optimized SPE calculation code (sine-cosine, etc) was written by J. Ritakari and me.
+</td>
+</tr>
+
+<tr>
+<td class="c1"><nobr><a href="http://cellspe-tasklib.cvs.sourceforge.net/cellspe-tasklib/cellspe-tasklib/cellspe-tasklib-dsp.h?view=markup">cellspe-taskblib-dsp.h</a></nobr></td>
+<td class="c2">Essentially contains just CellDspCommandEnum enumeration of commands, and their function declaration on the SPE.</td>
+</tr>
+
+<tr>
+<td class="c1"><nobr><a href="http://cellspe-tasklib.cvs.sourceforge.net/cellspe-tasklib/cellspe-tasklib/cellspe-tasklib.h?view=markup">cellspe-taskblib.h</a></nobr></td>
+<td class="c2">Contains the task context struct CellDSPTask_tt, a C++ class CellDSPTaskClass that can be used to mor easily fill out 
+a CellDSPTask_tt structure, and some function declares. Mixed SPE, PPU.</td>
+</tr>
+
+<tr>
+<td class="c1"><nobr><a href="http://cellspe-tasklib.cvs.sourceforge.net/cellspe-tasklib/cellspe-tasklib/minitest-cell.cpp?view=markup">minitest-cell.cpp</a></nobr></td>
+<td class="c2">Short PPU-side test program to call a couple of the SPE functions.</td>
+</tr>
+
+
+<tr>
+<td class="c1"><nobr><a href="http://cellspe-tasklib.cvs.sourceforge.net/cellspe-tasklib/cellspe-tasklib/snippets.cpp?view=markup">snippets.cpp</a></nobr></td>
+<td class="c2">Some fast vectorized float math routines that can be cut&amp;paste into your own code. Fast dual sine-cosine with 
+phase argument, dual sine-cosine oscillator with start phase and constant increment, complex multiply accumulate, 2-bit
+raw data into floats conversion.</td>
+</tr>
+
+<tr><td>&nbsp; </td><td></td></tr>
+
+<tr>
+<th>Subproject</th>
+<th>Description</th>
+</tr>
+
+<tr>
+<td class="c1"><nobr><a 
+href="http://cellspe-tasklib.cvs.sourceforge.net/cellspe-tasklib/cellspe-tasklib/noptest/">noptest/ </a></nobr></td>
+<td class="c2">Compares the latency of the two different SPU/PPU mailbox functions by checking the round-trip time
+for a PPE->SPE->PPE mailbox messaging sequence (direct problem state access vs &quot;normal&quot; access).</td>
+</tr>
+
+<tr>
+<td class="c1"><nobr><a 
+href="http://cellspe-tasklib.cvs.sourceforge.net/cellspe-tasklib/cellspe-tasklib/minicorrelator/">minicorrelator/ </a></nobr></td>
+<td class="c2">Ongoing work, a small interferometry correlator with 6 data sources and 1024-point channelization.
+Not using on the Cell DSP Task Library (yet, or ever). Code (C) J. Ritakari and me.</td>
+</tr>
+
+<tr>
+<td class="c1"><nobr><a 
+href="http://cellspe-tasklib.cvs.sourceforge.net/cellspe-tasklib/cellspe-tasklib/sdr/">sdr/ 
+</a></nobr></td><td class="c2">Ongoing work, lightweight software defined radio, goal is to receive a &ge;50 MHz 
+RF/IF spectrum and demodulate AM/SSB/USB and FM to audio band. Not too much code here yet... </td>
+</tr>
+
+<tr>
+<td class="c1"><nobr><a 
+href="http://cellspe-tasklib.cvs.sourceforge.net/cellspe-tasklib/cellspe-tasklib/spectrometer/">spectrometer/ 
+</a></nobr></td><td class="c2">Ongoing work. A real-time wideband RF 
+spectrometer for radio astronomy purposes. Later it will/may feature S/C 
+tracking, phase tracking, spectrum power correction and other features 
+in addition to standard FFT integrated power spectrum.
+</td>
+</tr>
+
+</table>
+
+<p>The first files are all part of the Cell DSP Task Library and framework. The second batch are individual subprojects that 
+actually do something, but may or may not be using that framework.
+
+
+<a name="tlusage" />
+<h3>Short Cell DSP Task Library usage description</h3>
+
+<p>There are several compile defines at the start of cellspe-tasklib.cpp (XPU_64BIT, VERBOSE_MALLOC, TASK_POLLING,
+RET_SPU_CYCLES, ALIGN_CHECKING ...). The code can be compiled into 64-bit mode (you need to change Makefile too!) by defining 
+<i>XPU_64BIT</i> as 1. Default is 32-bit. In 64-bit the PPU code will be 64-bit and all RAM addresses used on the 32-bit SPE will be 
+64-bit, too. Edit define of <i>RET_SPU_CYCLES</i> to have the SPE return its performance counter (spu decrementer difference) for the 
+executed task into the original task context (myTask.tick_count etc) residing in the RAM. The <i>TASK_POLLING</i> define can
+be used to have the PPU not wait for mailbox return messages (of any SPU!) but busy-poll the RAM task context of the SPE's task. The 
+PPU will wait until the right SPU writes a myTask.completed_flag to its context.
+
+<p>The SPE processing threads are started running with <i>celldsp_start()</i> and are terminated with 
+<i>celldsp_stop()</i>. Every started SPE will wait, checking its mailbox and waiting for the PPU framework to send the RAM address 
+(32 or 64 bit) of the task context that it should execute. The mailbox overhead from PPU dispatch to SPE task start is around 500ns.
+
+<p>Dispatching tasks to the SPEs has to go via <i>celldsp_executeTask(task*)</i>, or a sequence of 
+<i>spenr=celldsp_getFreeSPE()</i>, any number of [<i>celldsp_startTask(spenr,task*)</i>, <i>celldsp_waitTask(spenr)</i>], 
+and finally <i>celldsp_setFreeSPE(spenr)</i>. 
+
+<p>In the first task context you may set <i>myTask.next_task</i> to NULL, or point it to the next task context. This way the 
+SPE will work through the queue of tasks. In the default <i>TASK_POLLING</i> compilemode each task in the queue is flagged 
+as done, in non-polling mode only at the end of the queue the return result code is placed into the PPUs mailbox.
+
+<p>The task calls in your PowerPC PPU code you can warp into your own functions, of course, such as:
+<pre>
+  291 // Execute sine cosine generator (oscillator), amplitude is not normalized!!
+  292 int speSinCosGenerator(float startphase, float increment, fc32* cos_sin_out, int numiter)
+  293 {
+  294    // init
+  295    CellDSPTaskClass scgen(CELLDSP_TASK_SINCOS_GENERTR);
+  296    scgen.addOutVec((void*)cos_sin_out, numiter*sizeof(cf32));
+  297    CellDSPParams_Phase_tt * aux = &(scgen.getSubcontext()->Phase);
+  298    aux->argcount = numiter;
+  299    aux->phase_start = startphase;
+  300    aux->phase_delta = increment;
+  301    // perform
+  302    return celldsp_executeTask(scgen.getTask());
+  303 }
+</pre>
+
+Note that all input data arrays must be 16 or preferrably 128-byte aligned. Use the gcc/xlc aligned-attribute, for example
+<i><nobr>float arr[32768] __attribute__ ((aligned(128)))</nobr></i> for array declaration. Alternatively, use 
+<i><nobr>float* arr = malloc_align(sizeof(float)*length, 7);</nobr></i> (yes 7 because 128=2^<b>7</b>).
+
+
+
+<a name="celltips" />
+<h3>General Cell programming tips</h3>
+
+<p>The purpose of this section is to give some tight text and tips for Cell programming. This is for general Cell 
+programming and not directly tied to the Cell SPE Task Library projet. The emphasis in this section is on text, not 
+example code. And the text is still growing and under work, not 100% all here yet...
+
+<p>Apart from tips the text will be full with keywords that you can (and should!) use in Google. That way 
+you can find plenty of example code and in-depth articles on any particular tip. There are many fluffy pretty 
+Cell tips-and-tricks PowerPoint presentations that you can find by googling, too. However, they are simply not 
+hard-core enough for certain programmers, so for that reason, this section exists. Hopefully it 
+is of use to you, especially as a starting point for googling!
+
+<p>To begin, first some short descriptions for the most common abbreviations used in Cell processor context:
+
+<p><b>Abbreviations:</b>
+<dl>
+  <dt>LS
+    <dd>Local storage, the 256kB of 32-bit addressed memory on every SPE. Neumann architecture, code and 
+        data share same memory. The LS is the only memory accessible by an SPE program. Access to external data e.g. to
+        main RAM is possible only by using DMA transfers to/from LS. These have to be programmed
+        in your source explicitly, making the small LS essentially a software-managed cache.
+  <dt>EA
+    <dd>Effective Address, 32 or 64-bit address in the virtual address space of a PPU program. SPU
+        programs started by the PPU program share its virtual address space, and their LS's are mapped
+        to certain address ranges inside this space. SPE's can then access each others LS over
+        those EA ranges using DMA.
+  <dt>MFC
+    <dd>Memory Flow Controller, the DMA engine found on every SPU and on the PPU. It is the bridge
+        between the LS and RAM, and has some useful features like atomic DMA, signal notification,
+        inbound and outbound mailbox, etc. Supports multiple queued DMA tasks, up to 16 queued
+        per DMA tag group. Has the usual fence and barrier DMA support. DMA always uses LS,EA
+        address pairs, no support for LS,LS or EA,EA.
+</dl>
+
+<p><b>Portability:</b> are you kidding? At the current time, it is not
+really possible to write portable yet efficient C/C++ code for the Cell. 
+This is equally true for Intel IA-32, IBM Power, Sparc and other
+platforms. On the other hand, there are a couple of interesting
+multi-core multi-platform development suites around, such as from
+Rapidmind. These abstract the computation code into kernels (not always
+possible) and in theory allow the code to work somewhat fast and
+efficient on certain different platforms. At the time of writing
+(2007/2008), these devel suites were poor at custom DMA optimization
+e.g. custom DMA prefetch, buffering and SPE synchronization. To get the
+best computing performance and throughput you're better off when you
+write your own Cell-only low level code - unfortunately!
+
+<p><b>Basic DMA:</b> the DMA implementation on the Cell is rather a
+pain. DMA length can be 1, 4, 8, 16 bytes, and multiples of 16 bytes up
+till 16kB. However, for &le;16B transfers both the source and
+destination address must have the same alignment, and the alignment must
+match that of the DMA length. For 16B..16kB transfers the source and
+destination data have to be aligned to 16-byte boundaries. To get a
+small performance boost, use 128-byte alignment instead, as 128 byte is
+the cache line size. DMA transfers where src/dest alignment with respect
+to transfer length do not match up will cause a SPE program to crash
+with a SIG_BUS error, though the error is not always displayed. <br> For
+even better average throughput, realize that the DMA engine setup time
+is near constant, so prefer large DMAs in your code over a bunch of
+shorter ones.<br> To have your data aligned, be it a vector array or
+just a single scalar, on PPU or SPU, use either <i><nobr>__attribute __
+(aligned(x))</nobr></i> (static/global aligned array) or
+<i>malloc_align(len, log2(alignment))</i> (dynamic aligned array
+allocation). <br> DMA's can be put into same or different tag groups
+with a 5-bit ID (0..31), you choose one. Fence and barrier work within
+tag groups. You can wait for DMA completion by using a 32-bit tag group
+mask, in which you specify the interesting DMAs to wait for. 
+
+<blockquote>
+IBM articles: Cell Broadband Engine processor DMA engines<br>
+<a href="http://www.ibm.com/developerworks/power/library/pa-celldmas/">Part 1: The little engines that move data</a><br>
+<a href="http://www.ibm.com/developerworks/power/library/pa-celldmas2/">Part 2: From an SPE point of view</a><br>
+<br>
+More IBM docs (especially see Cell Broadband Engine Architecture):<br>
+<a href="http://www-01.ibm.com/chips/techlib/techlib.nsf/products/Cell_Broadband_Engine">Cell Broadband Engine 
+documentation</a>
+</blockquote>
+
+<p><img src="EIB.gif" alt="Element Interconnect Bus, image from IBM">
+
+<p><b>DMA direction:</b> each of the MFC's can handle bidirectional 2x25GB/s. Each core has one MFC, utilize them 
+all! For severe throughput improvement, instead of your PPU program DMAing data to SPE LS's, tell the SPE programs 
+where the data is (EA address) and let the SPE's use their own MFC to DMA the data into LS. The EA address
+you can pass in a 32-bit mailbox message or in a task context.
+
+<p><b>DMA lists:</b> <i>mfc_getl(),mfc_putl()</i>, useful if you need to transfer more than the 16kB length limit for 
+a single DMA allows. The DMA list implementation on the Cell processor is a quite cut-down version of what other DMA 
+engines have. Each of the maximally 2048 list entries tells the DMA engine the amount of data to transfer and a 
+32-bit EA (caveat, not 64-bit!) from where to get or where to put the data. The transfer is started 
+<i>mfc_getl/mfc_putl()</i> with a single LS address and the head of the DMA list. Unfortunately the data array at 
+the LS address must always be contiguous, only in EA/RAM the data can be scattered into blocks, so scatter-gather 
+works only outside of the SPE. To fill several different SPE-side arrays with one List DMA transfer, place them next 
+to each other in LS by e.g. putting them into the same <i>struct</i>. The list entries also have a nice 
+Stall-and-notify flag.
+
+<p><b>DMA of code:</b> program and data are in the same memory so there's no read-only program memory. Hence you can 
+DMA data from RAM into an array on the SPE and start executing it. This is called overlay programming. 
+For example <nobr><i>vector char newCode[512]; void (*func)(int)=&newCode[0];</i></nobr> the transfer data into 
+newCode[] and start running it with <nobr><i>func(0);</i></nobr>.
+
+<p><b>DMA from SPE to SPE:</b> if SPE processing generates intermediate results that will be processed
+on another SPE, try to avoid placing results back into RAM in between. The slow and high latency Cell external RAM 
+may cut down the performance a lot. Better utilize the fast 300GB/s on-chip EIB bandwidth by doing DMAs from one SPE 
+to another. For this to work, in the PPU code the SPE programs have to be started with direct problem state access 
+(<i>SPE_MAP_PS</i> flag). Then, still on the PPU, use <i>spe_get_ls(speid_t id)</i> to get the EA address at which 
+this SPEs LS starts. Hand these EA's to your SPE program via e.g. your task context. If the SPEs are running the 
+same binary program and you are using static/global arrays, then the LS addresses of arrays are the same on every 
+SPE!
+If arrays are e.g. outbuf[], inbuf[] then simply do a DMA <i><nobr>mfc_put(&outbuf[0], otherSPE_EA + (unsigned long 
+long)&inbuf[0], length, tag, 0, 0)</nobr></i> or similar style.
+
+<p><b>Atomic DMA:</b> all transfers &le;128 bytes are atomic, unlike with larger transfers, where there is no 
+guarantee that all the data is written in one go and in sequential order. Atomic DMA to some EA address is useful for 
+example for inter-SPE synchronization. While the SPEs have zero cache (no L1, L2), the MFC has 5 cache entries of 128 
+bytes each (cache line size). The SPEs MFC are indirectly aware of what addresses are in the other SPE's MFC cache. 
+The atomic transfers will land in or come from the cache of the SPU or PPU MFC first, no slow RAM access involved. If 
+you access that same EA address from all SPEs, the data reads and writes will stay on-chip and be very fast, ideal 
+for SPE signaling and synchronization. Writing to this shared EA is safe by using lock line reservation - 
+get-lock-line-and-reserve e.g. <i>getllar()</i> and a conditional write e.g. <i>putllc</i> that fails if the lock was 
+lost.
+
+<p><b>Floating point (FP) precision:</b> early versions of Cell have 
+comparably very slow (~1/10th) double-precision units while 
+single-precision FP performs fastest. 'Double' is accurate. The 'float' 
+is less accurate than expected - it does non- IEEE-754 rounding 
+and you may loose roughly 2-3 effective bits compared to normal 32-bit 
+IEEE 'float'. Newer Cell (eDP, PowerXCell, ...) typically have 'double' 
+that is about half the speed of 'float' and is accurate. Consider 
+what minimum FP accuracy your task requires. You may have to trade 
+speed versus precision.
+
+<p><b>Code profiling</b>: if you are lucky enough to have a Cell Blade, you can use oprofile to profile 
+SPE code. Playstation owners have to resort to call spu_write_decrementer(), spu_read_decrementer() timing
+functions inside SPE code, because the kernel (as of 2.6.23) still does not support oprofile profiling for 
+PS3 Cell. There is a free Cell emulator from IBM that you could in theory use to profile SPE code 
+performance. The emulator is necessarily slow and not very useful to 
+profile real program runs with large data. To profile your PPU code you 
+can use oprofile or gprof as usual.
+
+<p><b>Efficient computation</b>: the PPU has something akin to hyperthreading and has Altivec but the 
+performance is very poor. The PPU is useful mainly for I/O and starting SPE tasks. The real computation you 
+will have to run on the memory-limited SPEs. Every SPE has its own MFC DMA engine, so have the SPEs perform 
+their own DMA transfers of data from/to main memory or other SPUs. Don't try to use the PPUs single MFC to 
+distribute data to each of the SPEs.<br>
+<br>
+Try to keep data on-chip as long as possible and use SPE to SPE DMA transfers if applicable - try to avoid 
+writing back temporary results to the slow and high-latency RAM only to reload it from there later. 
+Preferrably move only the really final results back into RAM, this way you get the most out of the 300 GB/s 
+aggregate on-chip bus performance.<br>
+<br>
+To keep the computation fluid, use double buffering on the input 
+and output data buffers where possible. Essentially, during 
+current computation you should have ongoing DMAs that transfer out the 
+previous results and transfers in the next input data (from/to RAM or 
+another SPE). If you have several inputs it may mean you have to make 
+buffers small to fit into the small SPE memory, or reuse buffers for 
+other input data (array, vector ariable) as soon as computation no 
+longer requires the current buffer data.<br>
+<br>
+There is the <i>restrict</i> C keyword for pointers, it can come in handy and generate faster code...<br>
+<br>
+Some operations on large matrices and all-to-all computation such as 
+long Fourier transforms where data does not fit into SPE memory are 
+unfortunately hard to implement. It may be possible to use another 
+library and tell it to use just n out of N SPE cores, like FFTW allows 
+to. The other SPEs running your program can then fetch the result from 
+main RAM. Or you can alternate loading the library and then your program 
+onto the SPEs, though this obviously adds large SPE task switch 
+overhead.<br>
+<br>
+About branching, the SPE has no dynamic branch prediction nor does it extensively support static branch hints. Branch optimizations 
+have to be done in the source code. You can use gcc's __builtin_expect() to give the compiler some branch hints,
+so it can generate <i>hbr</i>, <i>hbra</i>, <i>hbrr</i> assembler hint instructions. See the <a 
+href="http://www.cellperformance.com/articles/2006/07/tutorial_branch_elimination_pa.html">branch elimination tutorial</a> on 
+cellperformance.com for details. You can for exampleeliminate certain branches by doing the two (asssumed trivial) computations A, B inside 
+the the if/else simultaneously, then select which of the two results A,B you want by using spu_select(A,B,m) and a bit mask m generated by 
+spu_...() comparison functions. The trick can be applied in some cases, in many others not. There are more tricks, see the tutorial.<br>
+<br>
+Make better use of the 128 registers on the SPU. When data is loaded 
+from an address into the register, try to perform most computations on 
+the data in the registers before storing the result back to SPU memory. 
+In your C code, have a section where you place the data into 
+temporaries, then do all computations on the temporaries and finally 
+place the data back into the main variables or arrays. Also try to 
+reduce loop tests and make use of the available registers by doing loop 
+unrolling - this means you should insert the same code for example four 
+times into the for loop and cut the max loop iterations into 
+one fourth.
+
+There are two ways for unrolling:
+<table border=0 cellpadding=8 cellspacing=8>
+<tr><td valign=top>
+<pre>
+#define UNROLL_BY_4(x) {x}{x}{x}{x}
+for (int i=0; i&lt;N/4; i++) {
+   UNROLL_BY_4( \
+     *out = spu_mul(*in, coeff); \
+     in++; out++; \
+   );
+}
+</pre>
+</td>
+<td valign=top>
+<pre>
+for (int i=0; i&lt;N; ) {
+   const int unroll_factor = 4;
+   for (int j=0; j&lt;unroll_factor; j++) {
+      out[j] = spu_mul(in[j], coeff);
+   }
+   in +=unroll_factor; out +=unroll_factor;
+   i += unroll_factor;
+}
+</pre>
+</td>
+</tr>
+</table>
+
+The first generates less instructions, though the latter may be 
+more readable. Note the requirement that N is evenly divisible by 4. 
+You should experiment with different loop unroll factors (2,4,6,8,...) 
+especially when your code is near final. During code changes an earlier 
+good unroll factor may cause slowdown in newer code.
+
+<p>TODO: more
+
+<hr size=1 width="100%">
+<center>Project admin and developer: Jan Wagner, <img alt"mail: ján dót wágnèr ât iki dót fi" 
+src="myemail.jpg" align="absbottom"></center>
+</blockquote>
+
+</body>
+</html>	
